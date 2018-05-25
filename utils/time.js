@@ -1,0 +1,1 @@
+exports.HOUR = 3600000;
