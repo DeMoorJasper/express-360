@@ -3,12 +3,14 @@ const sessionMiddleware = require('./middleware/sessionStore');
 const corsMiddleware = require('./middleware/cors');
 const compressionMiddleware = require('compression');
 const bodyParser = require('body-parser');
+const http = require('http');
 
-let server = express();
+let app = express();
+let server = http.createServer(app);
 
-function useStatic(staticAssets, server) {
+function useStatic(staticAssets, app) {
   if (staticAssets.url && staticAssets.folder) {
-    server.use(staticAssets.url, express.static(staticAssets.folder));
+    app.use(staticAssets.url, express.static(staticAssets.folder));
   } else {
     throw new Error('Static option should contain a url and folder property!');
   }
@@ -17,11 +19,11 @@ function useStatic(staticAssets, server) {
 async function initServer({ compression, sessions, staticAssets, trustProxy, cors }) {
   if (sessions) {
     // Register express-session
-    server.use(sessionMiddleware(sessions));
+    app.use(sessionMiddleware(sessions));
   }
 
   if (cors) {
-    server.use(corsMiddleware(cors));
+    app.use(corsMiddleware(cors));
   }
 
   if (trustProxy) {
@@ -29,31 +31,31 @@ async function initServer({ compression, sessions, staticAssets, trustProxy, cor
       trustProxy = 1;
     }
     // Trust load balancer
-    server.set('trust proxy', trustProxy);
+    app.set('trust proxy', trustProxy);
   }
 
   if (compression) {
     // Use GZIP
-    server.use(compressionMiddleware());
+    app.use(compressionMiddleware());
   }
 
   if (staticAssets) {
     if (Array.isArray(staticAssets)) {
       for (let staticAsset of staticAssets) {
-        useStatic(staticAsset, server);
+        useStatic(staticAsset, app);
       }
     } else {
-      useStatic(staticAssets, server);
+      useStatic(staticAssets, app);
     }
   }
 
   // parse application/x-www-form-urlencoded
-  server.use(bodyParser.urlencoded({ extended: false }))
+  app.use(bodyParser.urlencoded({ extended: false }))
 
   // parse application/json
-  server.use(bodyParser.json())
+  app.use(bodyParser.json())
 
-  return server;
+  return app;
 }
 
 async function startServer({ port }) {
@@ -65,5 +67,10 @@ async function startServer({ port }) {
   return server;
 }
 
+async function stopServer() {
+  await new Promise(resolve => server.close(resolve));
+}
+
 exports.initServer = initServer;
-exports.start = startServer;
+exports.startServer = startServer;
+exports.stopServer = stopServer;
