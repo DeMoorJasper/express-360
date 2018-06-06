@@ -4,6 +4,7 @@ const corsMiddleware = require('./middleware/cors');
 const compressionMiddleware = require('compression');
 const bodyParser = require('body-parser');
 const http = require('http');
+const xssFilter = require('x-xss-protection');
 
 let app = express();
 let server = http.createServer(app);
@@ -50,10 +51,12 @@ async function initServer({ compression, sessions, staticAssets, trustProxy, cor
   }
 
   // parse application/x-www-form-urlencoded
-  app.use(bodyParser.urlencoded({ extended: false }))
+  app.use(bodyParser.urlencoded({ extended: false }));
 
   // parse application/json
-  app.use(bodyParser.json())
+  app.use(bodyParser.json());
+
+  app.use(xssFilter());
 
   return app;
 }
